@@ -42,6 +42,6 @@ class Route {
         $host = 'http://' . $_SERVER['HTTP_HOST'] . '/';
         header('HTTP/1.1 404 Not Found');
     }
-    function test() {}
+    function test1() {}
 }
 ?>
