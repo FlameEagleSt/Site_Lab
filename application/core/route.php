@@ -42,22 +42,20 @@ class Route {
             self::ErrorPage404();
         }
 
-        if (!class_exists($controller_class)) {
-            self::ErrorPage404();
+        $controller = new $controller_name;
+        $action = $action_name;
+        if (method_exists($controller, $action)) {
+            $controller->action();
         }
-
-        $controller = new $controller_class;
-        if (method_exists($controller, $action_method)) {
-            $controller->$action_method();
-            return;
+        else {
+            Route::ErrorPage404();
         }
-
-        self::ErrorPage404();
     }
-
-    static function ErrorPage404() {
-        http_response_code(404);
-        exit('404 Not Found');
+    function ErrorPage404() {
+        $host = 'http://' . $_SERVER['HTTP_HOST'] . '/';
+        header('HTTP/1.1 404 Not Found');
+        header("Status: 404 Not Found");
+        header('Location:' . $host.'404');
     }
 }
 ?>
