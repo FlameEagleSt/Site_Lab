@@ -1,41 +1,15 @@
 <?php
-session_start();
-require_once 'queries.php';
-
-function e($value) {
-    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
-}
-
-function redirectTo($target) {
-    header('Location: ' . $target);
-    exit();
-}
-
-$user = $_SESSION['user'] ?? null;
-if (!$user || (int)($user['role'] ?? 0) !== 2) {
-    $_SESSION['product_flash'] = 'Недостаточно прав';
-    redirectTo('index.php');
-}
-
-$pdo = new PDO('pgsql:host=localhost;dbname=dbtest', 'postgres', '56914720');
-$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-$categories = $pdo->query("SELECT type_id, type_name FROM product_types ORDER BY type_id")->fetchAll(PDO::FETCH_ASSOC);
-
-$isEdit = isset($_GET['id']) && $_GET['id'] !== '';
-$product = null;
-
-if ($isEdit) {
-    $id = (int)$_GET['id'];
-    $stmt = $pdo->prepare("SELECT product_id, product_name, price, author, description, product_type, product_image, product_stock FROM products WHERE product_id = :id");
-    $stmt->execute([':id' => $id]);
-    $product = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if (!$product) {
-        $_SESSION['product_flash'] = 'Товар не найден';
-        redirectTo('index.php');
+if (!function_exists('e')) {
+    function e($value) {
+        return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
     }
 }
+
+$baseUrl = $baseUrl ?? '';
+$homeUrl = $homeUrl ?? '/';
+$adminActionUrl = $adminActionUrl ?? '';
+$isEdit = $isEdit ?? false;
+$product = $product ?? null;
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -43,7 +17,7 @@ if ($isEdit) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $isEdit ? 'Редактирование товара' : 'Добавление товара' ?></title>
-    <link rel="stylesheet" type="text/css" href="./dist/css/styles.css" />
+    <link rel="stylesheet" type="text/css" href="<?= $baseUrl ?>/dist/css/styles.css" />
     <style>
         .manager-container { max-width: 760px; margin: 30px auto; padding: 24px; background: #fff; border-radius: 12px; }
         .manager-title { margin-bottom: 24px; }
@@ -56,9 +30,9 @@ if ($isEdit) {
 <div class="manager-container">
     <h1 class="manager-title"><?= $isEdit ? 'Редактирование товара' : 'Добавление товара' ?></h1>
 
-    <form class="modal-form" action="product-manager.php" method="post" enctype="multipart/form-data">
+    <form class="modal-form" action="<?= $adminActionUrl ?>" method="post" enctype="multipart/form-data">
         <input type="hidden" name="method" value="<?= $isEdit ? 'update' : 'add' ?>">
-        <input type="hidden" name="redirect" value="index.php">
+        <input type="hidden" name="redirect" value="<?= $homeUrl ?>">
 
         <?php if ($isEdit): ?>
             <input type="hidden" name="id" value="<?= (int)$product['product_id'] ?>">
@@ -108,7 +82,7 @@ if ($isEdit) {
 
         <div class="manager-actions">
             <button type="submit" class="form-submit"><?= $isEdit ? 'Сохранить изменения' : 'Добавить товар' ?></button>
-            <a class="manager-link" href="index.php">Отмена</a>
+            <a class="manager-link" href="<?= $homeUrl ?>">Отмена</a>
         </div>
     </form>
 </div>

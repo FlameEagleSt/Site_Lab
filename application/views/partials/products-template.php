@@ -1,20 +1,23 @@
 <?php
-require_once 'queries.php';
-$pdo = new PDO('pgsql:host=localhost;dbname=dbtest', 'postgres', '56914720');
-$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+if (!function_exists('resolveAsset')) {
+    function resolveAsset($path, $baseUrl) {
+        if ($path === '' || $path === null) {
+            return '';
+        }
+        if (preg_match('#^https?://#i', $path) || str_starts_with($path, '/')) {
+            return $path;
+        }
+        return rtrim($baseUrl, '/') . '/' . ltrim($path, '/');
+    }
+}
+if (!function_exists('addQuery')) {
+    function addQuery($url, $query) {
+        return $url . (str_contains($url, '?') ? '&' : '?') . $query;
+    }
+}
 
-$products = $pdo->query(GET_ALL_PRODUCTS)->fetchAll(PDO::FETCH_ASSOC);
-$categories = $pdo->query("SELECT type_id, type_name FROM product_types")->fetchAll(PDO::FETCH_ASSOC);
-
-$user = isset($_SESSION['user']) ? $_SESSION['user'] : null;
-
-$sectionIds = [
-    1 => 'paintings',
-    2 => 'ceramics',
-    3 => 'jewelry',
-    4 => 'textiles',
-    5 => 'gifts'
-];
+$user = $currentUser ?? null;
+$sectionIds = $sectionIds ?? [];
 ?>
 
 <?php foreach ($categories as $category): ?>
@@ -35,6 +38,7 @@ $sectionIds = [
         <?php
             $stock = isset($product['product_stock']) ? (int)$product['product_stock'] : null;
             $isOutOfStock = ($stock !== null && $stock <= 0);
+            $imagePath = resolveAsset($product['product_image'] ?? '', $baseUrl ?? '');
         ?>
         <div class="product-card"
             data-id="<?= $product['product_id'] ?>"
@@ -43,9 +47,9 @@ $sectionIds = [
             data-description="<?= $product['description'] ?>"
             data-price="<?= $product['price'] ?>"
             data-author="<?= $product['author'] ?>"
-            data-image="<?= $product['product_image'] ?>">
+            data-image="<?= $imagePath ?>">
 
-            <div class="product-image" style="background-image: url('<?= $product['product_image'] ?>')"></div>
+            <div class="product-image" style="background-image: url('<?= $imagePath ?>')"></div>
             <div class="product-info">
                 <div class="product-title"><?= $product['product_name'] ?></div>
                 <div class="product-description"><?= $product['description'] ?></div>
@@ -60,25 +64,25 @@ $sectionIds = [
                 <?php endif; ?>
 
                 <?php if ($user): ?>
-                    <form action="cart.php" method="post">
+                    <form action="<?= $cartEndpoint ?>" method="post">
                         <input type="hidden" name="method" value="insert">
                         <input type="hidden" name="id" value="<?= $product['product_id'] ?>">
-                        <input type="hidden" name="redirect" value="index.php">
+                        <input type="hidden" name="redirect" value="<?= $currentBaseUrl ?>">
                         <button type="submit" class="product-button add-to-cart" <?= $isOutOfStock ? 'disabled' : '' ?>>
                             В корзину за <?= number_format($product['price'], 0, '.', ' ') . ' ₽' ?>
                         </button>
                     </form>
                 <?php else: ?>
-                    <a href="index.php?modal=login" class="product-button">Войти, чтобы купить</a>
+                    <a href="<?= addQuery($currentBaseUrl, 'modal=login') ?>" class="product-button">Войти, чтобы купить</a>
                 <?php endif; ?>
 
                 <?php if ($user && ($user['role'] ?? null) == 2): ?>
                 <div class="moderator-buttons">
-                    <a class="moderator-button moderator-edit" href="index.php?modal=edit-product&id=<?= $product['product_id'] ?>">Изменить</a>
-                    <form action="product-manager.php" method="post" class="moderator-form">
+                    <a class="moderator-button moderator-edit" href="<?= addQuery($currentBaseUrl, 'modal=edit-product&id=' . (int)$product['product_id']) ?>">Изменить</a>
+                    <form action="<?= $adminActionUrl ?>" method="post" class="moderator-form">
                         <input type="hidden" name="method" value="delete">
                         <input type="hidden" name="id" value="<?= $product['product_id'] ?>">
-                        <input type="hidden" name="redirect" value="index.php">
+                        <input type="hidden" name="redirect" value="<?= $currentBaseUrl ?>">
                         <button type="submit" class="moderator-button moderator-delete">Удалить</button>
                     </form>
                 </div>
